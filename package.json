@@ -2,15 +2,8 @@
   "name": "mhk-web3-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
-"scripts": {
-  "test": "echo \"Error: no test specified\" && exit 1",
-  "build": "npx hardhat compile && tsc",
-  "start": "npm run build && node build/index.js"
-},
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "MIT",
+  "private": true,
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@types/body-parser": "^1.19.5",
@@ -21,6 +14,8 @@
     "typescript": "^5.4.4"
   },
   "dependencies": {
+    "@types/node": "^20.12.5",
+    "@vercel/node": "^3.0.26",
     "body-parser": "^1.20.2",
     "ethers": "^6.11.1",
     "express": "^4.19.2",
