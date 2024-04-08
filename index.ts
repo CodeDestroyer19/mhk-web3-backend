@@ -1,8 +1,14 @@
-// index.ts
-import express, { Request, Response } from "express";
+import express from "express";
 import bodyParser from "body-parser";
 import swaggerUi from "swagger-ui-express";
-import swaggerJSDoc from "swagger-jsdoc";
+import swaggerJSDoc, { Options } from "swagger-jsdoc";
+import {
+  Request,
+  ParamsDictionary,
+  Response,
+  NextFunction,
+} from "express-serve-static-core";
+import { ParsedQs } from "qs";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,30 +16,38 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(bodyParser.json());
 
-// Define Swagger options
-const options = {
-  definition: {
-    openapi: "3.0.0",
-    info: {
-      title: "Backend API Documentation",
-      version: "1.0.0",
-      description: "Documentation for the backend API of your application",
-    },
-    servers: [
-      {
-        url: "http://localhost:3000",
-        description: "Local server",
+// Function to generate Swagger options dynamically
+const getSwaggerOptions = (req: Request): Options => {
+  const serverUrl = `${req.protocol}://${req.get("host")}`;
+
+  return {
+    definition: {
+      openapi: "3.0.0",
+      info: {
+        title: "Backend API Documentation",
+        version: "1.0.0",
+        description: "Documentation for the backend API of your application",
       },
-    ],
-  },
-  apis: ["./index.ts"], // Path to the main application file
+      servers: [
+        {
+          url: serverUrl,
+          description: "Server provided by hosting provider",
+        },
+      ],
+    },
+    apis: ["./index.js"], // Path to the main application file
+  };
 };
 
-// Initialize Swagger-jsdoc
-const swaggerSpec = swaggerJSDoc(options);
-
-// Serve Swagger UI
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Initialize Swagger-jsdoc with dynamically generated options
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  (req: Request, res: Response, next: NextFunction) => {
+    const swaggerSpec = swaggerJSDoc(getSwaggerOptions(req));
+    swaggerUi.setup(swaggerSpec, {})(req, res, next); // Passing an empty object as the second argument
+  }
+);
 
 // Routes
 /**
