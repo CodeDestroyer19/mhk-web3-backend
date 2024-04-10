@@ -11,6 +11,7 @@
  *   post:
  *     summary: Create a new storefront
  *     description: Create a new storefront with provided metadata.
+ *     tags: [Stores]
  *     requestBody:
  *       required: true
  *       content:
