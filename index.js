@@ -1,17 +1,19 @@
-const express = require("express");
-const swaggerUI = require("swagger-ui-express");
-const swaggerSpecs = require("./swagger");
-const cors = require("cors");
-const Bugsnag = require("@bugsnag/js");
-const BugsnagPluginExpress = require("@bugsnag/plugin-express");
-const { createStore } = require("./routes/create-store");
+import express from "express";
+import { serve, setup } from "swagger-ui-express";
+import swaggerSpecs from "./swagger.js";
+import cors from "cors";
+import Bugsnag from "@bugsnag/js";
+import BugsnagPluginExpress from "@bugsnag/plugin-express";
+import createStore from "./routes/create-store/index.js";
 
-Bugsnag.start({
+const { start, getPlugin } = Bugsnag;
+
+start({
   apiKey: "3ac28c1be6c98c20df280f880974a29d",
   plugins: [BugsnagPluginExpress],
 });
 
-var middleware = Bugsnag.getPlugin("express");
+var middleware = getPlugin("express");
 
 const app = express();
 
@@ -21,9 +23,9 @@ app.use(cors());
 app.use(middleware.requestHandler);
 
 // Serve Swagger UI at /api-docs route
-app.use("/api-docs", swaggerUI.serve, (req, res, next) => {
+app.use("/api-docs", serve, (req, res, next) => {
   const swaggerSpec = swaggerSpecs(req);
-  swaggerUI.setup(swaggerSpec)(req, res, next);
+  setup(swaggerSpec)(req, res, next);
 });
 
 // Redirect root path to /api-docs

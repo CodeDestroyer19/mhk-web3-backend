@@ -1,4 +1,4 @@
-const swaggerJSDoc = require("swagger-jsdoc");
+import swaggerJSDoc from "swagger-jsdoc";
 
 const getSwaggerOptions = (req) => {
   const serverUrl = `${req.protocol}://${req.get("host")}`;
@@ -24,4 +24,4 @@ const getSwaggerOptions = (req) => {
 const swaggerSpecs = (req) => {
   return swaggerJSDoc(getSwaggerOptions(req));
 };
-module.exports = swaggerSpecs;
+export default swaggerSpecs;

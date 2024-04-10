@@ -34,11 +34,37 @@
  *       400:
  *         description: Bad request. Invalid or missing parameters.
  */
-const createStore = (req, res) => {
-  // Handle the request to create a storefront
-  // Example: Save the storefront data to a database
-  console.log("Received request to create storefront:", req.body);
-  res.status(200).json({ message: "Storefront created successfully" });
+import { ethers } from "ethers";
+import { generatePrivateKey } from "../../src/Service/Web3Service.js";
+import DeployContractService from "../../src/Service/DeployContractService.js";
+const { JsonRpcProvider, Wallet, Contract } = ethers;
+
+const provider = new JsonRpcProvider("https://bsc-dataseed.binance.org/");
+const privateKey = generatePrivateKey();
+const { contract, abi } = DeployContractService();
+const contractAddress = contract; // Address of the deployed smart contract
+
+// const wallet = new Wallet(privateKey, provider);
+// const contractusr = new Contract(contractAddress, abi, wallet);
+
+const createStore = async (req, res) => {
+  try {
+    const { metadata } = req.body;
+    if (!metadata || !metadata.name || !metadata.description) {
+      return res.status(400).json({ error: "Invalid or missing metadata" });
+    }
+
+    const transaction = await contractusr.createStorefront(
+      metadata.name,
+      metadata.description
+    );
+    await transaction.wait();
+
+    res.status(200).json({ message: "Storefront created successfully" });
+  } catch (error) {
+    console.error("Error creating storefront:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
 };
 
-module.exports = { createStore };
+export default createStore;
