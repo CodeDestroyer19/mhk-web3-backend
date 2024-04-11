@@ -21,6 +21,8 @@
   "dependencies": {
     "@bugsnag/js": "^7.22.4",
     "@bugsnag/plugin-express": "^7.19.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts-upgradeable": "^5.0.2",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
