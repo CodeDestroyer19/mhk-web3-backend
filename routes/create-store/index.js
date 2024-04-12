@@ -6,8 +6,8 @@
  */
 
 import { ethers } from "ethers";
-import { generatePrivateKey } from "../../src/Service/Web3Service.js";
-import DeployContractService from "../../src/Service/DeployContractService.js";
+// import { generatePrivateKey } from "../../src/Service/Web3Service.js";
+// import DeployContractService from "../../src/Service/DeployContractService.js";
 const { JsonRpcProvider, Wallet, Contract } = ethers;
 import MyStorefrontJSON from "../../artifacts/contracts/Store/CreateStore.sol/MyStorefront.json" assert { type: "json" };
 import Bugsnag from "@bugsnag/js";
@@ -45,10 +45,11 @@ import Bugsnag from "@bugsnag/js";
  *         description: Bad request. Invalid or missing parameters.
  */
 export const createStore = async (req, res) => {
+  const { metadata, userAddress } = req.body;
   const privateKey =
-    "0x302f5a588de387f5d6a9280da6cbeb42de41705eaafbe7bb837f83b5b5f1d692";
+    "0x1dd2fed51c6bf9ececb95f9c39ed36188ceb495f43c9158dba3c635fc58db5ff";
   const { abi } = MyStorefrontJSON;
-  const contractAddress = "0xC88E0094e5212f7f4e06eFF772c2C181A23Ea641"; // Address of the deployed smart contract
+  const contractAddress = "0xCacD9279F86BD6EaE8e6944fEdCEB6731083C7de";
   const provider = new ethers.JsonRpcProvider(
     "https://data-seed-prebsc-1-s1.bnbchain.org:8545/"
   );
@@ -56,14 +57,11 @@ export const createStore = async (req, res) => {
   const contract = new ethers.Contract(contractAddress, abi, wallet);
 
   try {
-    const { metadata, userAddress } = req.body;
     if (!metadata || !metadata.name || !metadata.description) {
       return res.status(400).json({ error: "Invalid or missing metadata" });
     }
 
-    console.log("We start here");
     const creatorAddress = userAddress; // Address used for validation
-    console.log(creatorAddress + "8");
     const hasStore = await contract.hasStore(creatorAddress);
     console.log("Here we are");
 
@@ -71,12 +69,15 @@ export const createStore = async (req, res) => {
       return res.status(400).json({ error: "Store already created" });
     }
     // Estimate gas limit
-    const gasLimit = await provider.estimateGas({
+    const gasLimit = await wallet.estimateGas({
       to: contractAddress,
       data: contract.interface.encodeFunctionData("createStorefront", [
         JSON.stringify(metadata),
       ]),
+      chainId: 97,
     });
+
+    console.log(gasLimit);
 
     // Get fee data
     const feeData = await provider.getFeeData();
@@ -95,6 +96,7 @@ export const createStore = async (req, res) => {
       gasLimit: adjustedGasLimit.toString(),
       gasPrice: adjustedGasPrice.toString(),
       chainId: 97, // Assuming BSC Testnet, adjust for your network
+      revert: "Reverting to orignal state",
     };
 
     // Sign and send transaction
@@ -202,10 +204,7 @@ export const getStorefront = async (req, res) => {
  */
 export const updateStorefront = async (req, res) => {
   const { storefrontId } = req.params;
-  const { updates } = req.body; // Assuming updates object contains changes to storefront metadata
-
-  // ... Retrieve private key securely ...
-
+  const { updates } = req.body;
   const provider = new ethers.JsonRpcProvider(
     "https://data-seed-prebsc-1-s1.bnbchain.org:8545/"
   );
