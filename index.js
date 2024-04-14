@@ -4,7 +4,12 @@ import swaggerSpecs from "./swagger.js";
 import cors from "cors";
 import Bugsnag from "@bugsnag/js";
 import BugsnagPluginExpress from "@bugsnag/plugin-express";
-import { createStore } from "./routes/create-store/index.js";
+import {
+  createStore,
+  deleteStorefront,
+  getStorefront,
+  updateStorefront,
+} from "./routes/create-store/index.js";
 
 const { start, getPlugin } = Bugsnag;
 
@@ -17,10 +22,18 @@ var middleware = getPlugin("express");
 
 const app = express();
 
+// Define custom middleware function to log requests
+function logRequest(req, res, next) {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+}
+
 // Use Bugsnag middleware
 app.use(cors());
 app.use(middleware.requestHandler);
 app.use(express.json());
+// Use the custom logRequest middleware for all routes
+app.use(logRequest);
 
 // Serve Swagger UI at /api-docs route
 app.use("/api-docs", serve, (req, res, next) => {
@@ -33,10 +46,14 @@ app.get("/", (req, res) => {
   res.redirect("/api-docs");
 });
 
-app.post("/api/createStorefront", createStore);
+// Basic Store Crud Operations
+app.post("/api/createStorefront/:userAddress", createStore);
+app.put("/api/updateStorefront/:userAddress", updateStorefront);
+app.get("/api/getStorefront/:userAddress", getStorefront);
+app.delete("/api/deleteStorefront/:userAddress", deleteStorefront);
 
 app.use(middleware.errorHandler);
 
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
+app.listen(3001, () => {
+  console.log("Server is running on port 3001");
 });

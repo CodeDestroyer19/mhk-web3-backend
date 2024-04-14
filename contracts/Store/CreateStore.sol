@@ -57,7 +57,7 @@ contract MyStorefront is OwnableUpgradeable, UUPSUpgradeable {
         emit StorefrontUpdated(msg.sender, _metadata);
     }
 
-    function deleteStorefront() external onlyOwner {
+    function deleteStorefront() external {
         address sender = msg.sender;
         uint index = getIndex(sender);
         if (index >= storefronts.length || storefronts[index].owner != sender) {

@@ -6,19 +6,28 @@
  */
 
 import { ethers } from "ethers";
-// import { generatePrivateKey } from "../../src/Service/Web3Service.js";
-// import DeployContractService from "../../src/Service/DeployContractService.js";
-const { JsonRpcProvider, Wallet, Contract } = ethers;
-import MyStorefrontJSON from "../../artifacts/contracts/Store/CreateStore.sol/MyStorefront.json" assert { type: "json" };
 import Bugsnag from "@bugsnag/js";
+import MyStorefrontJSON from "../../artifacts/contracts/Store/CreateStore.sol/MyStorefront.json" assert { type: "json" };
+
+const contractAddress = "0x7898acc91e901e81a50a3bd17a8e67acf4aa7554";
+const { abi } = MyStorefrontJSON;
+const provider = new ethers.providers.JsonRpcProvider(
+  "https://data-seed-prebsc-1-s1.bnbchain.org:8545/"
+);
 
 /**
  * @swagger
- * /api/createStorefront:
+ * /api/createStorefront/{userAddress}:
  *   post:
  *     summary: Create a new storefront
  *     description: Create a new storefront with provided metadata for a user.
  *     tags: [Stores]
+ *     parameters:
+ *       - in: path
+ *         name: userAddress
+ *         required: true
+ *         schema:
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
@@ -26,9 +35,6 @@ import Bugsnag from "@bugsnag/js";
  *           schema:
  *             type: object
  *             properties:
- *               userAddress:
- *                 type: string
- *                 description: Address of the user creating the storefront.
  *               metadata:
  *                 type: object
  *                 properties:
@@ -45,18 +51,18 @@ import Bugsnag from "@bugsnag/js";
  *         description: Bad request. Invalid or missing parameters.
  */
 export const createStore = async (req, res) => {
-  const { metadata, userAddress } = req.body;
+  const { metadata } = req.body;
+  const { userAddress } = req.params;
   const privateKey =
-    "0x1dd2fed51c6bf9ececb95f9c39ed36188ceb495f43c9158dba3c635fc58db5ff";
-  const { abi } = MyStorefrontJSON;
-  const contractAddress = "0xCacD9279F86BD6EaE8e6944fEdCEB6731083C7de";
-  const provider = new ethers.JsonRpcProvider(
-    "https://data-seed-prebsc-1-s1.bnbchain.org:8545/"
-  );
-  const wallet = new Wallet(privateKey, provider);
+    "0x6aba2664ef3d34b005229cc5db8ba5fac0955fb10a3ebc050cb5324edffaec1b";
+  const wallet = new ethers.Wallet(privateKey, provider);
   const contract = new ethers.Contract(contractAddress, abi, wallet);
 
   try {
+    if (userAddress.toLowerCase() !== wallet.address.toLowerCase()) {
+      return res.status(403).json({ error: "Unauthorized access" });
+    }
+
     if (!metadata || !metadata.name || !metadata.description) {
       return res.status(400).json({ error: "Invalid or missing metadata" });
     }
@@ -68,62 +74,72 @@ export const createStore = async (req, res) => {
     if (hasStore) {
       return res.status(400).json({ error: "Store already created" });
     }
-    // Estimate gas limit
-    const gasLimit = await wallet.estimateGas({
+
+    const gasLimit = ethers.BigNumber.from("200000"); // Adjust gas limit as needed
+    const gasPrice = ethers.utils.parseUnits("5", "gwei"); // Adjust gas price as needed
+
+    const nonce = await provider.getTransactionCount(wallet.address, "latest");
+
+    const transactionParameters = {
+      nonce: nonce,
       to: contractAddress,
       data: contract.interface.encodeFunctionData("createStorefront", [
         JSON.stringify(metadata),
       ]),
+      gasLimit: gasLimit.toHexString(), // Convert gas limit to hex string
+      gasPrice: gasPrice.toHexString(), // Convert gas price to hex string
       chainId: 97,
-    });
-
-    console.log(gasLimit);
-
-    // Get fee data
-    const feeData = await provider.getFeeData();
-    const gasPrice = feeData.gasPrice;
-
-    // Adjust gas limit and gas price (optional)
-    const adjustedGasLimit = Number(gasLimit) * 2; // Adjust gas limit if necessary
-    const adjustedGasPrice = Number(gasPrice) * 1; // Adjust gas price if necessary
-
-    // Create transaction object
-    const transaction = {
-      to: contractAddress,
-      data: contract.interface.encodeFunctionData("createStorefront", [
-        JSON.stringify(metadata),
-      ]),
-      gasLimit: adjustedGasLimit.toString(),
-      gasPrice: adjustedGasPrice.toString(),
-      chainId: 97, // Assuming BSC Testnet, adjust for your network
-      revert: "Reverting to orignal state",
     };
 
-    // Sign and send transaction
-    const sentTransaction = await wallet.sendTransaction(transaction);
+    const signed = await wallet.signTransaction(transactionParameters);
+    const tx = await provider.sendTransaction(signed);
 
-    // Wait for transaction to be mined
-    const mined = await provider.waitForTransaction(sentTransaction.hash);
-    console.log(mined);
+    let receipt = null;
+
+    while (receipt === null) {
+      try {
+        receipt = await provider.getTransactionReceipt(tx.hash);
+
+        if (receipt === null) {
+          console.log(`Trying again to fetch txn receipt....`);
+
+          continue;
+        }
+
+        const mined = await tx.wait(receipt.confirmations);
+        console.log(`Receipt confirmations:`, mined);
+
+        console.info(
+          `Transaction receipt : https://www.bscscan.com/tx/${receipt.logs[1].transactionHash}`
+        );
+      } catch (e) {
+        console.log(`Receipt error:`, e);
+        break;
+      }
+    }
 
     res.status(200).json({ message: "Storefront created successfully" });
   } catch (error) {
     console.error("Error creating storefront:", error);
     Bugsnag.notify(error);
-    res.status(500).json({ error: "Internal server error" });
+    let errorMessage = "Internal server error";
+    if (error.error && error.error.message) {
+      errorMessage = error.error.message;
+    }
+    res.status(500).json({ error: errorMessage });
   }
 };
 
 /**
  * @swagger
- * /api/getStorefront/{storefrontId}:
+ * /api/getStorefront/{userAddress}:
  *   get:
  *     summary: Get a storefront by ID
  *     description: Retrieve a specific storefront based on its ID.
  *     tags: [Stores]
  *     parameters:
  *       - in: path
- *         name: storefrontId
+ *         name: userAddress
  *         required: true
  *         schema:
  *           type: string
@@ -146,37 +162,39 @@ export const createStore = async (req, res) => {
  *         description: Internal server error.
  */
 export const getStorefront = async (req, res) => {
-  const { storefrontId } = req.params; // Assuming storefront ID is retrieved from request params
-
-  // ... Retrieve private key securely (avoid hardcoding) ...
-
-  const provider = new ethers.JsonRpcProvider(
-    "https://data-seed-prebsc-1-s1.bnbchain.org:8545/"
-  );
+  const { userAddress } = req.params;
+  const privateKey =
+    "0x6aba2664ef3d34b005229cc5db8ba5fac0955fb10a3ebc050cb5324edffaec1b";
+  const wallet = new ethers.Wallet(privateKey, provider);
   const contract = new ethers.Contract(contractAddress, abi, wallet);
 
   try {
-    const storefrontData = await contract.getStorefront(storefrontId);
+    if (userAddress.toLowerCase() !== wallet.address.toLowerCase()) {
+      return res.status(403).json({ error: "Unauthorized access" });
+    }
+    const storefrontData = await contract.getStorefront(userAddress);
     const parsedData = JSON.parse(storefrontData); // Assuming data is stored as a string
 
     res.status(200).json({ data: parsedData });
   } catch (error) {
     console.error("Error getting storefront:", error);
     Bugsnag.notify(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      error: "Internal server error: " + error.message.toString(),
+    });
   }
 };
 
 /**
  * @swagger
- * /api/updateStorefront/{storefrontId}:
+ * /api/updateStorefront/{userAddress}:
  *   put:
  *     summary: Update a storefront
  *     description: Update an existing storefront with provided changes.
  *     tags: [Stores]
  *     parameters:
  *       - in: path
- *         name: storefrontId
+ *         name: userAddress
  *         required: true
  *         schema:
  *           type: string
@@ -186,12 +204,16 @@ export const getStorefront = async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
- *             # Update this with your actual update data structure
  *             properties:
- *               name:
- *                 type: string
- *               description:
- *                 type: string
+ *               metadata:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                     description: Name of the storefront.
+ *                   description:
+ *                     type: string
+ *                     description: Description of the storefront.
  *     responses:
  *       200:
  *         description: Storefront updated successfully.
@@ -203,38 +225,41 @@ export const getStorefront = async (req, res) => {
  *         description: Internal server error.
  */
 export const updateStorefront = async (req, res) => {
-  const { storefrontId } = req.params;
-  const { updates } = req.body;
-  const provider = new ethers.JsonRpcProvider(
-    "https://data-seed-prebsc-1-s1.bnbchain.org:8545/"
-  );
+  const { metadata } = req.body;
+  const { userAddress } = req.params;
+  const privateKey =
+    "0x6aba2664ef3d34b005229cc5db8ba5fac0955fb10a3ebc050cb5324edffaec1b";
+  const wallet = new ethers.Wallet(privateKey, provider);
   const contract = new ethers.Contract(contractAddress, abi, wallet);
 
   try {
-    const tx = await contract.updateStorefront(
-      storefrontId,
-      JSON.stringify(updates)
-    );
-    await provider.waitForTransaction(tx.hash);
+    if (userAddress.toLowerCase() !== wallet.address.toLowerCase()) {
+      return res.status(403).json({ error: "Unauthorized access" });
+    }
+
+    const tx = await contract.updateStorefront(JSON.stringify(metadata));
+    await tx.wait();
 
     res.status(200).json({ message: "Storefront updated successfully" });
   } catch (error) {
     console.error("Error updating storefront:", error);
     Bugsnag.notify(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      error: "Internal server error: " + error.message.toString(),
+    });
   }
 };
 
 /**
  * @swagger
- * /api/deleteStorefront/{storefrontId}:
+ * /api/deleteStorefront/{userAddress}:
  *   delete:
  *     summary: Delete a storefront
  *     description: Delete a storefront by its ID.
  *     tags: [Stores]
  *     parameters:
  *       - in: path
- *         name: storefrontId
+ *         name: userAddress
  *         required: true
  *         schema:
  *           type: string
@@ -248,23 +273,27 @@ export const updateStorefront = async (req, res) => {
  */
 
 export const deleteStorefront = async (req, res) => {
-  const { storefrontId } = req.params;
-
-  // ... Retrieve private key securely ...
-
-  const provider = new ethers.JsonRpcProvider(
-    "https://data-seed-prebsc-1-s1.bnbchain.org:8545/"
-  );
+  const { userAddress } = req.params;
+  const privateKey =
+    "0x6aba2664ef3d34b005229cc5db8ba5fac0955fb10a3ebc050cb5324edffaec1b";
+  const wallet = new ethers.Wallet(privateKey, provider);
   const contract = new ethers.Contract(contractAddress, abi, wallet);
 
   try {
-    const tx = await contract.deleteStorefront(storefrontId);
-    await provider.waitForTransaction(tx.hash);
+    if (userAddress.toLowerCase() !== wallet.address.toLowerCase()) {
+      return res.status(403).json({ error: "Unauthorized access" });
+    }
+    const tx = await contract.deleteStorefront({
+      gasLimit: 300000,
+    });
+    await tx.wait();
 
     res.status(200).json({ message: "Storefront deleted successfully" });
   } catch (error) {
     console.error("Error deleting storefront:", error);
     Bugsnag.notify(error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({
+      error: "Internal server error: " + error.message.toString(),
+    });
   }
 };
