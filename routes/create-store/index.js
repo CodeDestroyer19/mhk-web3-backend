@@ -9,7 +9,7 @@ import { ethers } from "ethers";
 import Bugsnag from "@bugsnag/js";
 import MyStorefrontJSON from "../../artifacts/contracts/Store/CreateStore.sol/MyStorefront.json" assert { type: "json" };
 
-const contractAddress = "0x7898acc91e901e81a50a3bd17a8e67acf4aa7554";
+const contractAddress = "0xb861ea3cce8995866915b2953edb3e9e6901c4dd";
 const { abi } = MyStorefrontJSON;
 const provider = new ethers.providers.JsonRpcProvider(
   "https://data-seed-prebsc-1-s1.bnbchain.org:8545/"
@@ -51,26 +51,25 @@ const provider = new ethers.providers.JsonRpcProvider(
  *         description: Bad request. Invalid or missing parameters.
  */
 export const createStore = async (req, res) => {
-  const { metadata } = req.body;
+  const { metaData } = req.body;
   const { userAddress } = req.params;
   const privateKey =
-    "0x6aba2664ef3d34b005229cc5db8ba5fac0955fb10a3ebc050cb5324edffaec1b";
+    "0x302f5a588de387f5d6a9280da6cbeb42de41705eaafbe7bb837f83b5b5f1d692";
   const wallet = new ethers.Wallet(privateKey, provider);
   const contract = new ethers.Contract(contractAddress, abi, wallet);
 
   try {
+    console.log(metaData);
     if (userAddress.toLowerCase() !== wallet.address.toLowerCase()) {
       return res.status(403).json({ error: "Unauthorized access" });
     }
 
-    if (!metadata || !metadata.name || !metadata.description) {
+    if (!metaData || !metaData.name || !metaData.description) {
       return res.status(400).json({ error: "Invalid or missing metadata" });
     }
 
     const creatorAddress = userAddress; // Address used for validation
     const hasStore = await contract.hasStore(creatorAddress);
-    console.log("Here we are");
-
     if (hasStore) {
       return res.status(400).json({ error: "Store already created" });
     }
@@ -84,7 +83,7 @@ export const createStore = async (req, res) => {
       nonce: nonce,
       to: contractAddress,
       data: contract.interface.encodeFunctionData("createStorefront", [
-        JSON.stringify(metadata),
+        JSON.stringify(metaData),
       ]),
       gasLimit: gasLimit.toHexString(), // Convert gas limit to hex string
       gasPrice: gasPrice.toHexString(), // Convert gas price to hex string
@@ -164,7 +163,7 @@ export const createStore = async (req, res) => {
 export const getStorefront = async (req, res) => {
   const { userAddress } = req.params;
   const privateKey =
-    "0x6aba2664ef3d34b005229cc5db8ba5fac0955fb10a3ebc050cb5324edffaec1b";
+    "0x302f5a588de387f5d6a9280da6cbeb42de41705eaafbe7bb837f83b5b5f1d692";
   const wallet = new ethers.Wallet(privateKey, provider);
   const contract = new ethers.Contract(contractAddress, abi, wallet);
 
@@ -173,7 +172,12 @@ export const getStorefront = async (req, res) => {
       return res.status(403).json({ error: "Unauthorized access" });
     }
     const storefrontData = await contract.getStorefront(userAddress);
-    const parsedData = JSON.parse(storefrontData); // Assuming data is stored as a string
+
+    if (storefrontData[1] === "") {
+      return res.status(404).json({ error: "Store doesn't exist" });
+    }
+    console.log(storefrontData[1]);
+    const parsedData = JSON.parse(storefrontData[1]); // Assuming data is stored as a string
 
     res.status(200).json({ data: parsedData });
   } catch (error) {
@@ -228,7 +232,7 @@ export const updateStorefront = async (req, res) => {
   const { metadata } = req.body;
   const { userAddress } = req.params;
   const privateKey =
-    "0x6aba2664ef3d34b005229cc5db8ba5fac0955fb10a3ebc050cb5324edffaec1b";
+    "0x302f5a588de387f5d6a9280da6cbeb42de41705eaafbe7bb837f83b5b5f1d692";
   const wallet = new ethers.Wallet(privateKey, provider);
   const contract = new ethers.Contract(contractAddress, abi, wallet);
 
@@ -236,8 +240,31 @@ export const updateStorefront = async (req, res) => {
     if (userAddress.toLowerCase() !== wallet.address.toLowerCase()) {
       return res.status(403).json({ error: "Unauthorized access" });
     }
+    const hasStore = await contract.hasStore(userAddress);
+    if (!hasStore) {
+      return res
+        .status(400)
+        .json({ error: "There is no store for user: " + userAddress });
+    }
 
-    const tx = await contract.updateStorefront(JSON.stringify(metadata));
+    const gasLimit = ethers.BigNumber.from("200000"); // Adjust gas limit as needed
+    const gasPrice = ethers.utils.parseUnits("5", "gwei"); // Adjust gas price as needed
+    const nonce = await provider.getTransactionCount(wallet.address, "latest");
+
+    const transactionParameters = {
+      nonce: nonce,
+      to: contractAddress,
+      data: contract.interface.encodeFunctionData("updateStorefront", [
+        JSON.stringify(metadata),
+      ]),
+      gasLimit: gasLimit.toHexString(), // Convert gas limit to hex string
+      gasPrice: gasPrice.toHexString(), // Convert gas price to hex string
+      chainId: 97,
+    };
+
+    const signed = await wallet.signTransaction(transactionParameters);
+    const tx = await provider.sendTransaction(signed);
+
     await tx.wait();
 
     res.status(200).json({ message: "Storefront updated successfully" });
@@ -275,7 +302,7 @@ export const updateStorefront = async (req, res) => {
 export const deleteStorefront = async (req, res) => {
   const { userAddress } = req.params;
   const privateKey =
-    "0x6aba2664ef3d34b005229cc5db8ba5fac0955fb10a3ebc050cb5324edffaec1b";
+    "0x302f5a588de387f5d6a9280da6cbeb42de41705eaafbe7bb837f83b5b5f1d692";
   const wallet = new ethers.Wallet(privateKey, provider);
   const contract = new ethers.Contract(contractAddress, abi, wallet);
 

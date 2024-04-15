@@ -19,7 +19,7 @@ async function DeployContractService(userAddress) {
   // Transaction overrides for deployment
   const overrides = {
     gasLimit: 3000000n, // Convert gas limit to hexadecimal
-    gasPrice: ethers.parseUnits("20", "gwei"), // Use utils from ethers
+    gasPrice: ethers.utils.parseUnits("20", "gwei"), // Use utils from ethers
   };
 
   const contract = await ContractFactory.deploy(
