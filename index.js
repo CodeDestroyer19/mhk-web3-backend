@@ -9,7 +9,7 @@ import {
   deleteStorefront,
   getStorefront,
   updateStorefront,
-} from "./routes/create-store/index.js";
+} from "./routes/StoreController/index.js";
 
 const { start, getPlugin } = Bugsnag;
 
@@ -51,6 +51,8 @@ app.post("/api/createStorefront/:userAddress", createStore);
 app.put("/api/updateStorefront/:userAddress", updateStorefront);
 app.get("/api/getStorefront/:userAddress", getStorefront);
 app.delete("/api/deleteStorefront/:userAddress", deleteStorefront);
+
+// Basic Product CRUD Operations
 
 app.use(middleware.errorHandler);
 

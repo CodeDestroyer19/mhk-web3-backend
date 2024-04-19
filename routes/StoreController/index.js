@@ -176,7 +176,6 @@ export const getStorefront = async (req, res) => {
     if (storefrontData[1] === "") {
       return res.status(404).json({ error: "Store doesn't exist" });
     }
-    console.log(storefrontData[1]);
     const parsedData = JSON.parse(storefrontData[1]); // Assuming data is stored as a string
 
     res.status(200).json({ data: parsedData });
