@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import Bugsnag from "@bugsnag/js";
-import MyStorefrontJSON from "../../artifacts/contracts/Product/Product.sol/MyProduct.json" assert { type: "json" };
+import MyStorefrontJSON from "../../artifacts/contracts/Store/CreateStore.sol/MyStorefront.json" assert { type: "json" };
 
 const contractAddress = "0xb861ea3cce8995866915b2953edb3e9e6901c4dd";
 const { abi } = MyStorefrontJSON;

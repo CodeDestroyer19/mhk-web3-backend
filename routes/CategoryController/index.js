@@ -7,10 +7,10 @@
 
 import { ethers } from "ethers";
 import Bugsnag from "@bugsnag/js";
-import StorefrontContractJSON from "../../artifacts/contracts/Storefront.sol/Storefront.json";
+import MyStorefrontJSON from "../../artifacts/contracts/Store/CreateStore.sol/MyStorefront.json" assert { type: "json" };
 
 const contractAddress = "0xb861ea3cce8995866915b2953edb3e9e6901c4dd"; // Update with your actual contract address
-const { abi } = StorefrontContractJSON;
+const { abi } = MyStorefrontJSON;
 const provider = new ethers.providers.JsonRpcProvider(
   "https://data-seed-prebsc-1-s1.bnbchain.org:8545/"
 );

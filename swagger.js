@@ -1,7 +1,12 @@
 import swaggerJSDoc from "swagger-jsdoc";
 
 const getSwaggerOptions = (req) => {
-  const serverUrl = `${req.protocol}://${req.get("host")}`;
+  let protocol = req.protocol;
+  if (req.headers["x-forwarded-proto"]) {
+    protocol = req.headers["x-forwarded-proto"];
+  }
+
+  const serverUrl = `${protocol}://${req.get("host")}`;
 
   return {
     definition: {
