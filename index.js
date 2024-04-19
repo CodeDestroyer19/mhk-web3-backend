@@ -12,6 +12,7 @@ import {
 } from "./routes/StoreController/index.js";
 
 const { start, getPlugin } = Bugsnag;
+const port = process.env.PORT || 3001;
 
 start({
   apiKey: "3ac28c1be6c98c20df280f880974a29d",
@@ -56,6 +57,6 @@ app.delete("/api/deleteStorefront/:userAddress", deleteStorefront);
 
 app.use(middleware.errorHandler);
 
-app.listen(3001, () => {
-  console.log("Server is running on port 3001");
+app.listen(port, () => {
+  console.log("Server is running on port " + port);
 });
